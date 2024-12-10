@@ -1,6 +1,7 @@
 import express, { Request, Response } from "express";
 import mongoose from "mongoose";
 import userRoutes from "./routes/userRoutes";
+import authRoutes from "./routes/authRoutes";
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(express.json()); // 解析 JSON 请求体
 app.use(express.urlencoded({ extended: true })); // 解析 URL 编码的请求体
 
 app.use("/api", userRoutes);
+app.use("/api", authRoutes);
 
 // 基本路由
 app.get("/", (req: Request, res: Response) => {

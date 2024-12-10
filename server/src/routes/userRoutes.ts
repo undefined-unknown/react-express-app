@@ -1,88 +1,57 @@
 import { Router, Request, Response } from "express";
-import mongoose from "mongoose";
-
-// 定义 User Schema
-const userSchema = new mongoose.Schema(
-  {
-    name: { type: String, required: true },
-    email: { type: String, required: true, unique: true },
-    age: { type: Number, required: true },
-    delete_flag: { type: String, default: 0 },
-  },
-  {
-    timestamps: true, // 自动创建 createdAt 和 updatedAt 字段
-  }
-);
-
-// 创建 User 模型
-const User = mongoose.model("User", userSchema);
+import jwt from "jsonwebtoken";
+import User from "../models/User";
+import { JWT_SECRET } from "../constants/env";
 
 const router = Router();
 
-// 获取所有用户
-router.get("/users", async (req: Request, res: Response) => {
+router.post("/register", async (req: Request, res: Response) => {
+  const { name, email, password } = req.body;
   try {
-    const users = await User.find();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch users" });
-  }
-});
-
-router.get("/users/:id", async (req: Request, res: Response) => {
-  try {
-    const user = await User.findById(req.params.id);
-    if (!user) {
-      return res.status(404).json({ message: "User not found" });
+    const userExists = await User.findOne({ email });
+    if (userExists) {
+      return res.status(400).json({ message: "User already exists" });
     }
-    res.json(user);
-  } catch (error) {
-    res.status(500).json({ message: "Failed to fetch user" });
-  }
-});
 
-router.post("/users", async (req: Request, res: Response) => {
-  const { name, email, age } = req.body;
-  try {
-    const newUser = new User({ name, email, age });
+    const newUser = new User({ name, email, password });
     await newUser.save();
-    res.status(201).json(newUser);
+
+    res.status(201).json({
+      message: "User registered successfully",
+      user: {
+        name: newUser.name,
+        email: newUser.email,
+      },
+    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to create user", error });
+    res.status(500).json({ message: "Failed to register user", error });
   }
 });
 
-router.put("/users/:id", async (req: Request, res: Response) => {
-  const { name, email, age } = req.body;
+router.post("/login", async (req: Request, res: Response) => {
+  const { email, password } = req.body;
   try {
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { name, email, age },
-      { new: true }
-    );
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({ message: "Invaild email or password" });
     }
-    res.json({ message: "User updated successfully" });
-  } catch (error) {
-    res.status(500).json({ message: "Failed to update user", error });
-  }
-});
+    const isPasswordMatch = await user.matchPassword(password);
+    if (!isPasswordMatch) {
+      return res.status(400).json({ message: "Invaild email or password" });
+    }
 
-router.delete("/users/:id", async (req: Request, res: Response) => {
-  try {
-    // 软删除
-    const updatedUser = await User.findByIdAndUpdate(
-      req.params.id,
-      { $set: { delete_flag: "1" } },
-      { new: true }
+    const token = jwt.sign(
+      { userId: user._id, name: user.name },
+      JWT_SECRET, // 密钥
+      { expiresIn: "1d" } // 设置过期时间为 1 天
     );
-    if (!updatedUser) {
-      return res.status(404).json({ message: "User not found" });
-    }
-    res.json({ message: "User deleted successfully" });
+
+    res.json({
+      message: "Login successful",
+      token,
+    });
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete user", error });
+    res.status(500).json({ message: "Failed to login user", error });
   }
 });
 
