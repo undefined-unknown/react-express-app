@@ -1,125 +1,237 @@
-一. 搭建 Typescript 的 Express 项目
+# 二. 构建 RESTful API 服务
 
-1. 安装 TypeScript 和相关依赖
-   首先，确保你已经安装了 Node.js。如果还没有，请按照上面的步骤进行安装。
-   在项目根目录下初始化项目：
-   mkdir express-ts-app
-   cd express-ts-app
-   npm init -y
-   然后安装 TypeScript 及相关依赖：
-   npm install typescript @types/node @types/express express
+### 1. **理解 RESTful API 设计原则**
 
-- typescript：TypeScript 编译器
-- @types/node：Node.js 的类型定义
-- @types/express：Express 的类型定义
-- express：Express 库
+**REST（Representational State Transfer）** 是一种架构风格，用于设计网络应用程序的通信方式。设计 RESTful API 时，主要遵循以下几个原则：
 
-2. 配置 TypeScript
-   创建一个 tsconfig.json 文件，配置 TypeScript 编译选项：
-   npx tsc --init
-   修改 tsconfig.json 文件，确保以下配置项正确（关键是设置 target 和 moduleResolution）：
-   {
-   "compilerOptions": {
-   "target": "ES6",
-   "moduleResolution": "node",
-   "outDir": "./dist",
-   "rootDir": "./src",
-   "esModuleInterop": true,
-   "skipLibCheck": true,
-   "forceConsistentCasingInFileNames": true
-   },
-   "include": ["src/**/*.ts"],
-   "exclude": ["node_modules"]
-   }
+- **资源导向**：每个 URL 都代表一个资源（例如，`/users` 代表用户资源，`/products` 代表产品资源）。
+- **HTTP 方法**：使用标准的 HTTP 方法来处理资源：
 
-- outDir：编译后的 JavaScript 文件存放目录
-- rootDir：TypeScript 源代码目录
+  - `GET`：获取资源
+  - `POST`：创建新资源
+  - `PUT`：更新现有资源
+  - `DELETE`：删除资源
 
-3. 创建项目结构
-   创建以下项目文件结构：
-   express-ts-app/
-   ├── node_modules/
-   ├── src/
-   │ └── app.ts
-   ├── tsconfig.json
-   ├── package.json
-   └── package-lock.json
+- **无状态性**：每个请求都应该包含足够的信息，服务器不应在请求之间保存任何状态。
+- **路径设计**：路径应该是名词，并且尽量简洁。路径中的单数和复数需要统一。
 
-4. 编写 Express 应用代码
-   在 src/app.ts 中编写 TypeScript 版本的 Express 应用：
-   import express, { Request, Response } from 'express';
+### 2. **创建 RESTful API 路由**
+
+首先，我们继续在 TypeScript 中使用 Express，设计一个简单的用户管理系统，具备增、删、改、查（CRUD）功能。
+
+#### 2.1 创建文件结构
+
+假设我们在 `src` 目录下创建一个 `routes` 目录，用于存放路由文件。
+
+```sql
+express-ts-app/
+├── node_modules/
+├── src/
+│   ├── routes/
+│   │   └── userRoutes.ts
+│   ├── app.ts
+├── tsconfig.json
+├── package.json
+```
+
+#### 2.2 安装依赖
+
+在开发环境中，我们还需要安装一个数据库，这里我们选择使用 **MongoDB** 和 **Mongoose**（一个 MongoDB 的对象建模工具）：
+
+```sql
+npm install mongoose
+```
+
+然后在 `src/app.ts` 中，我们需要连接到 MongoDB 数据库。
+
+#### 2.3 编写 API 路由代码
+
+1. 创建 `userRoutes.ts` 文件
+
+```sql
+import { Router, Request, Response } from 'express';
+import mongoose from 'mongoose';
+
+// 定义 User Schema
+const userSchema = new mongoose.Schema({
+    name: String,
+    email: String,
+    age: Number
+});
+
+// 创建 User 模型
+const User = mongoose.model('User', userSchema);
+
+const router = Router();
+
+// 获取所有用户
+router.get('/users', async (req: Request, res: Response) => {
+    try {
+        const users = await User.find();
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to fetch users' });
+    }
+});
+
+// 获取单个用户
+router.get('/users/:id', async (req: Request, res: Response) => {
+    try {
+        const user = await User.findById(req.params.id);
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to fetch user' });
+    }
+});
+
+// 创建新用户
+router.post('/users', async (req: Request, res: Response) => {
+    const { name, email, age } = req.body;
+    try {
+        const newUser = new User({ name, email, age });
+        await newUser.save();
+        res.status(201).json(newUser);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to create user' });
+    }
+});
+
+// 更新用户信息
+router.put('/users/:id', async (req: Request, res: Response) => {
+    const { name, email, age } = req.body;
+    try {
+        const updatedUser = await User.findByIdAndUpdate(
+            req.params.id,
+            { name, email, age },
+            { new: true }
+        );
+        if (!updatedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json(updatedUser);
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to update user' });
+    }
+});
+
+// 删除用户
+router.delete('/users/:id', async (req: Request, res: Response) => {
+    try {
+        const deletedUser = await User.findByIdAndDelete(req.params.id);
+        if (!deletedUser) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({ message: 'User deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Failed to delete user' });
+    }
+});
+
+export default router;
+```
+
+1. 在 `app.ts` 中引入并使用路由
+
+在 `app.ts` 文件中，我们需要连接数据库，并将路由挂载到应用上。
+
+```sql
+import express, { Request, Response } from 'express';
+import mongoose from 'mongoose';
+import userRoutes from './routes/userRoutes';
 
 const app = express();
 
+// 连接到 MongoDB
+mongoose.connect('mongodb://localhost:27017/express-ts-app', {
+    useNewUrlParser: true,
+    useUnifiedTopology: true,
+})
+    .then(() => console.log('Connected to MongoDB'))
+    .catch((err) => console.log('Failed to connect to MongoDB', err));
+
+// 使用 JSON 中间件，解析请求体中的 JSON 数据
+app.use(express.json());
+
+// 挂载路由
+app.use('/api', userRoutes);
+
 // 基本路由
 app.get('/', (req: Request, res: Response) => {
-res.send('Hello, Express with TypeScript!');
+    res.send('Welcome to the Express API with TypeScript!');
 });
 
-// 处理 GET 请求
-app.get('/get-data', (req: Request, res: Response) => {
-res.send('GET request received');
-});
-
-// 处理 POST 请求
-app.post('/post-data', (req: Request, res: Response) => {
-res.send('POST request received');
-});
-
-// 启动服务器，监听 3000 端口
+// 启动服务器
 app.listen(3000, () => {
-console.log('Server is running on http://localhost:3000');
+    console.log('Server is running on http://localhost:3000');
 });
+```
 
-这里使用了 TypeScript 的类型注解：
+### 3. **测试 API**
 
-- Request 和 Response 来标注请求和响应对象的类型。
-- express() 返回一个 Express 实例，它会根据 TypeScript 类型推导出相应的类型。
+#### 3.1 运行应用
 
-5. 编译 TypeScript 代码
-   在终端中运行以下命令编译 TypeScript 代码：
-   npx tsc
-   这会将 TypeScript 代码编译到 dist 目录中。
-6. 运行应用
-   使用 Node.js 运行编译后的 JavaScript 文件：
-   node dist/app.js
-   打开浏览器，访问 http://localhost:3000，你应该会看到 Hello, Express with TypeScript! 的响应。
-7. 使用 nodemon 自动重载（可选）
-   如果你希望在修改 TypeScript 代码时自动重新启动应用，可以使用 nodemon 配合 TypeScript：
-   安装 nodemon 和 ts-node：
-   npm install nodemon ts-node
-   在 package.json 中添加一个启动脚本：
-   {
-   "scripts": {
-   "dev": "nodemon --exec ts-node src/app.ts"
-   }
-   }
+你可以通过以下命令启动应用：
 
-然后运行以下命令启动开发模式：
+```sql
 npm run dev
-现在，每次修改 src/app.ts 文件后，nodemon 会自动重新启动应用。 8. 添加更多功能（中间件、路由等）
-你可以继续使用 TypeScript 来扩展应用，例如添加中间件、解析请求体、处理路由等。
+```
 
-- 中间件示例：
-  app.use(express.json()); // 解析 JSON 请求体
-  app.use(express.urlencoded({ extended: true })); // 解析 URL 编码的请求体
-- 路由示例：
-  app.get('/user/:id', (req: Request, res: Response) => {
-  const userId = req.params.id;
-  res.send(`User ID: ${userId}`);
-  });
+然后，你可以使用 Postman 或任何其他的 API 测试工具来测试以下 API 路由：
 
-app.get('/search', (req: Request, res: Response) => {
-const { name, age } = req.query;
-res.send(`Search results for ${name}, age: ${age}`);
-});
+- **GET \*\***/api/users\*\*：获取所有用户
+- **GET \*\***/api/users/:id\*\*：获取单个用户，替换 `:id` 为有效的用户 ID
+- **POST \*\***/api/users\*\*：创建一个新用户，提交 JSON 数据（如：`{ "name": "John", "email": "john@example.com", "age": 30 }`）
+- **PUT \*\***/api/users/:id\*\*：更新用户信息，提交 JSON 数据
+- **DELETE \*\***/api/users/:id\*\*：删除用户，替换 `:id` 为有效的用户 ID
+
+#### 3.2 测试示例（Postman）
+
+1. **POST 请求**：
+
+   - URL: `http://localhost:3000/api/users`
+   - Body (JSON):
+
+   ```sql
+
+   ```
+
+{
+"name": "Alice",
+"email": "alice@example.com",
+"age": 28
+}
+
+````
+
+2. **GET 请求**：
+	- URL: `http://localhost:3000/api/users`
+
+3. **PUT 请求**：
+	- URL: `http://localhost:3000/api/users/{userId}`
+	- Body (JSON):
+	```sql
+{
+    "name": "Updated Name",
+    "email": "updated@example.com",
+    "age": 29
+}
+````
+
+4. **DELETE 请求**：
+   - URL: `http://localhost:3000/api/users/{userId}`
 
 ---
 
-总结
-通过这些步骤，你已经成功创建了一个使用 TypeScript 的 Express 应用，并掌握了以下内容：
+### 总结
 
-- 如何设置 TypeScript 项目并配置 tsconfig.json。
-- 如何使用 TypeScript 编写 Express 应用代码，并正确类型化请求和响应。
-- 如何使用 nodemon 和 ts-node 实现自动重载功能。
-- 如何处理常见的路由和请求类型。
+通过这一部分，你已经学习了如何：
+
+1. 使用 TypeScript 和 Express 构建 RESTful API。
+2. 创建 CRUD 操作（创建、读取、更新、删除）以管理资源（如用户）。
+3. 使用 MongoDB 和 Mongoose 进行数据存储与操作。
+4. 测试和调试 API 路由。
+
+你可以根据实际需求扩展此 API，例如加入分页、排序、数据验证等功能，或者实现用户身份验证等。
