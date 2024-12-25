@@ -2,7 +2,6 @@ import { Router, Request, Response } from "express";
 import jwt from "jsonwebtoken";
 import authMiddleware from "../middleware/auth";
 import User from "../models/User";
-import { JWT_SECRET } from "../constants/env";
 
 const router = Router();
 
@@ -75,7 +74,7 @@ router.post("/login", async (req: Request, res: Response) => {
 
     const token = jwt.sign(
       { userId: user._id, name: user.name },
-      JWT_SECRET, // 密钥
+      process.env.JWT_SECRET as string, // 密钥
       { expiresIn: "1d" } // 设置过期时间为 1 天
     );
 

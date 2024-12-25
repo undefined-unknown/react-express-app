@@ -1,13 +1,24 @@
 import express, { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
+import dotenv from "dotenv";
 import userRoutes from "./routes/userRoutes";
 import authRoutes from "./routes/authRoutes";
 import logger from "./utils/logger";
 
+const env = process.env.NODE_ENV || "development";
+dotenv.config({ path: `.env.${env}` });
+
+console.log("process.env.FLAG", process.env.FLAG);
+
 const app = express();
 
-const dbURI =
-  "mongodb+srv://zyz82777:Kevin293.@cluster0.ndu93.mongodb.net/react-express-app?retryWrites=true&w=majority&appName=Cluster0";
+console.log("process.env.USERNAME", process.env.DB_USERNAME);
+console.log("process.env.USERNAME", process.env.DB_PASSWORD);
+console.log("process.env.USERNAME", process.env.DB_NAME);
+
+const dbURI = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.ndu93.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority&appName=Cluster0`;
+
+console.log("dbURI", dbURI);
 
 mongoose
   .connect(dbURI)
@@ -22,10 +33,7 @@ app.use("/api", authRoutes);
 
 // 基本路由
 app.get("/", (req: Request, res: Response) => {
-  setTimeout(() => {
-    throw new Error("Test Uncaught Exception");
-  }, 1000);
-  res.send("Hello, Express with TypeScript!");
+  res.send(`Hello, Express with TypeScript!:${process.env.NODE_ENV}`);
 });
 
 // 处理 GET 请求

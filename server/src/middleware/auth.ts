@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../constants/env";
 
 export interface JwtPayload {
   userId: string;
@@ -17,7 +16,10 @@ const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as JwtPayload; // 验证 token
+    const decoded = jwt.verify(
+      token,
+      process.env.JWT_SECRET as string
+    ) as JwtPayload; // 验证 token
     req.user = decoded; // 将用户信息挂载到请求对象上
     next(); // 继续处理后续路由
   } catch (error) {
