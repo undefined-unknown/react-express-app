@@ -1,20 +1,27 @@
 import express, { Request, Response, NextFunction } from "express";
 import mongoose from "mongoose";
-import dotenv from "dotenv";
+// import dotenv from "dotenv";
+import config from "config";
 import userRoutes from "./routes/userRoutes";
 import authRoutes from "./routes/authRoutes";
 import logger from "./utils/logger";
 
-const env = process.env.NODE_ENV || "development";
-dotenv.config({ path: `.env.${env}` });
+// const env = process.env.NODE_ENV || "development";
+// dotenv.config({ path: `.env.${env}` });
 
-console.log("process.env.FLAG", process.env.FLAG);
+// console.log("process.env.FLAG", process.env.FLAG);
+
+// console.log("process.env.USERNAME", process.env.DB_USERNAME);
+// console.log("process.env.USERNAME", process.env.DB_PASSWORD);
+// console.log("process.env.USERNAME", process.env.DB_NAME);
+
+console.log("config", config);
+
+for (let key in config) {
+  process.env[key] = config.get(key);
+}
 
 const app = express();
-
-console.log("process.env.USERNAME", process.env.DB_USERNAME);
-console.log("process.env.USERNAME", process.env.DB_PASSWORD);
-console.log("process.env.USERNAME", process.env.DB_NAME);
 
 const dbURI = `mongodb+srv://${process.env.DB_USERNAME}:${process.env.DB_PASSWORD}@cluster0.ndu93.mongodb.net/${process.env.DB_NAME}?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -33,7 +40,7 @@ app.use("/api", authRoutes);
 
 // 基本路由
 app.get("/", (req: Request, res: Response) => {
-  res.send(`Hello, Express with TypeScript!:${process.env.NODE_ENV}`);
+  res.send(`Hello, Express with TypeScript!:${JSON.stringify(config)}`);
 });
 
 // 处理 GET 请求

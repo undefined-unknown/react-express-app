@@ -1,0 +1,7 @@
+{
+  "DB_USERNAME": "zyz82777",
+  "DB_PASSWORD": "Kevin293.",
+  "DB_NAME": "react-express-app",
+  "JWT_SECRET": "your_jwt_secret",
+  "FLAG": "dev"
+}
